@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPL Cricket Player Statistics Scraper & Analytics Dashboard</title>
+  <meta name="description" content="Complete IPL Cricket Player Statistics Scraper and Analytics Dashboard. Comprehensive batting and bowling statistics, CSV/JSON dumps, and multi-season support.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Top Navigation Header -->
+    <header class="header">
+      <div class="brand">
+        <img src="/static/favicon.svg" alt="IPL Ball Logo" class="brand-icon">
+        <div>
+          <h1 class="brand-title">IPL CRICSTAT</h1>
+          <div class="brand-subtitle">Cricbuzz Real-Time Statistics & Scraper</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Dynamic Season Dropdown -->
+        <div class="select-wrapper">
+          <select id="seasonSelect" class="custom-select" aria-label="Select IPL Season">
+            <option value="2025">IPL 2025</option>
+            <option value="2024">IPL 2024</option>
+            <option value="2023">IPL 2023</option>
+            <option value="2022">IPL 2022</option>
+            <option value="2021">IPL 2021</option>
+            <option value="2020">IPL 2020</option>
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+
+        <!-- Scrape Trigger Modal Button -->
+        <button id="openScrapeModalBtn" class="btn btn-primary" title="Trigger manual scraper">
+          <span>⚡</span> Run Scraper
+        </button>
+
+        <!-- Scheduler Button -->
+        <button id="openScheduleModalBtn" class="btn btn-secondary" title="Configure automated scraper">
+          <span>⏱</span> Scheduler
+        </button>
+
+        <!-- CSV Download Button -->
+        <button id="downloadCsvBtn" class="btn btn-outline-gold" title="Download CSV Dump">
+          <span>📥</span> CSV Dump
+        </button>
+
+        <!-- JSON Download Button -->
+        <button id="downloadJsonBtn" class="btn btn-secondary" title="Download JSON Dump">
+          <span>📄</span> JSON
+        </button>
+      </div>
+    </header>
+
+    <!-- Real-time Scrape Status Banner (Hidden by default) -->
+    <div id="scrapeBanner" class="scrape-banner" style="display: none;">
+      <div class="scrape-banner-left">
+        <div class="spinner"></div>
+        <div class="scrape-banner-text">
+          <h4 id="scrapeBannerTitle">Scraping in progress...</h4>
+          <p id="scrapeBannerStep">Connecting to Cricbuzz endpoints...</p>
+        </div>
+      </div>
+      <button id="viewScrapeLogsBtn" class="btn btn-secondary" style="padding: 0.35rem 0.8rem; font-size: 0.78rem;">
+        View Live Logs
+      </button>
+    </div>
+
+    <!-- Summary Metrics Grid -->
+    <section class="metrics-grid">
+      <div class="metric-card" style="--card-accent: var(--accent-cyan);">
+        <div class="metric-header">
+          <span class="metric-label">Total Players</span>
+          <span class="metric-icon">🏏</span>
+        </div>
+        <div id="metricTotalPlayers" class="metric-value">--</div>
+        <div class="metric-sub">Complete 10 franchises</div>
+      </div>
+
+      <div class="metric-card" style="--card-accent: var(--accent-green);">
+        <div class="metric-header">
+          <span class="metric-label">Franchises</span>
+          <span class="metric-icon">🛡</span>
+        </div>
+        <div id="metricTotalTeams" class="metric-value">10</div>
+        <div class="metric-sub">100% Team Coverage</div>
+      </div>
+
+      <div class="metric-card" style="--card-accent: var(--orange-cap);">
+        <div class="metric-header">
+          <span class="metric-label">Orange Cap Leader</span>
+          <span class="cap-badge cap-orange">Orange Cap</span>
+        </div>
+        <div id="metricOrangeCapName" class="metric-value" style="font-size: 1.25rem;">--</div>
+        <div id="metricOrangeCapStats" class="metric-sub">-- Runs</div>
+      </div>
+
+      <div class="metric-card" style="--card-accent: var(--purple-cap);">
+        <div class="metric-header">
+          <span class="metric-label">Purple Cap Leader</span>
+          <span class="cap-badge cap-purple">Purple Cap</span>
+        </div>
+        <div id="metricPurpleCapName" class="metric-value" style="font-size: 1.25rem;">--</div>
+        <div id="metricPurpleCapStats" class="metric-sub">-- Wickets</div>
+      </div>
+
+      <div class="metric-card" style="--card-accent: var(--accent-purple);">
+        <div class="metric-header">
+          <span class="metric-label">All-Rounders</span>
+          <span class="metric-icon">⚡</span>
+        </div>
+        <div id="metricAllRounders" class="metric-value">--</div>
+        <div class="metric-sub">Combined Bat & Bowl</div>
+      </div>
+
+      <div class="metric-card" style="--card-accent: var(--accent-gold);">
+        <div class="metric-header">
+          <span class="metric-label">Image Coverage</span>
+          <span class="metric-icon">📸</span>
+        </div>
+        <div id="metricImageCoverage" class="metric-value">100%</div>
+        <div class="metric-sub">Official Cricbuzz CDN</div>
+      </div>
+    </section>
+
+    <!-- Filtering & Controls Card -->
+    <section class="controls-card">
+      <!-- 10 IPL Teams Filter Tabs -->
+      <div id="teamFilters" class="team-filters-wrapper">
+        <button class="team-pill active" data-team="all">All Teams</button>
+        <button class="team-pill" data-team="CSK" style="--team-color: #FDB913;">CSK</button>
+        <button class="team-pill" data-team="RCB" style="--team-color: #EC1C24;">RCB</button>
+        <button class="team-pill" data-team="MI" style="--team-color: #004BA0;">MI</button>
+        <button class="team-pill" data-team="KKR" style="--team-color: #3A225D;">KKR</button>
+        <button class="team-pill" data-team="RR" style="--team-color: #EA1A85;">RR</button>
+        <button class="team-pill" data-team="DC" style="--team-color: #0078BC;">DC</button>
+        <button class="team-pill" data-team="PBKS" style="--team-color: #DD1F2D;">PBKS</button>
+        <button class="team-pill" data-team="SRH" style="--team-color: #F26522;">SRH</button>
+        <button class="team-pill" data-team="GT" style="--team-color: #1C2A38; --card-team-color: #E5B757;">GT</button>
+        <button class="team-pill" data-team="LSG" style="--team-color: #0057E7;">LSG</button>
+      </div>
+
+      <div class="sub-controls">
+        <!-- Search Input -->
+        <div class="search-input-group">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search player name...">
+        </div>
+
+        <!-- Role Filter Tabs -->
+        <div id="roleTabs" class="role-tabs">
+          <button class="role-tab active" data-role="all">All Players</button>
+          <button class="role-tab" data-role="batters">Batters</button>
+          <button class="role-tab" data-role="bowlers">Bowlers</button>
+          <button class="role-tab" data-role="all_rounder">All-Rounders</button>
+        </div>
+
+        <!-- View Mode Switcher -->
+        <div class="view-actions">
+          <div id="viewToggle" class="view-toggle">
+            <button id="viewTableBtn" class="toggle-btn active" title="Table View">☰</button>
+            <button id="viewGridBtn" class="toggle-btn" title="Player Cards View">☷</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Data Container -->
+    <main class="data-card">
+      <!-- Table View -->
+      <div id="tableView" class="table-wrapper">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th data-sort="player_name">Player</th>
+              <th data-sort="team_name">Team</th>
+              <th data-sort="matches_played">Mat</th>
+              <!-- Batting Header Group -->
+              <th data-sort="batting_innings" class="th-bat">Inns (Bat)</th>
+              <th data-sort="runs_scored" class="th-bat">Runs</th>
+              <th data-sort="batting_average" class="th-bat">Avg</th>
+              <th data-sort="batting_strike_rate" class="th-bat">SR</th>
+              <th data-sort="fours" class="th-bat">4s</th>
+              <th data-sort="sixes" class="th-bat">6s</th>
+              <!-- Bowling Header Group -->
+              <th data-sort="bowling_innings" class="th-bowl">Inns (Bowl)</th>
+              <th data-sort="overs_bowled" class="th-bowl">Overs</th>
+              <th data-sort="wickets_taken" class="th-bowl">Wkts</th>
+              <th data-sort="runs_conceded" class="th-bowl">Runs Conceded</th>
+              <th data-sort="bowling_average" class="th-bowl">Bowl Avg</th>
+              <th data-sort="bowling_economy_rate" class="th-bowl">Econ</th>
+              <th data-sort="bowling_strike_rate" class="th-bowl">Bowl SR</th>
+            </tr>
+          </thead>
+          <tbody id="playersTableBody">
+            <!-- Dynamically populated via app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Player Cards Grid View (Hidden by default) -->
+      <div id="gridView" class="cards-grid" style="display: none;">
+        <!-- Dynamically populated via app.js -->
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar">
+        <span id="paginationInfo">Showing 1-50 of 190 players</span>
+        <div class="pagination-controls">
+          <button id="prevPageBtn" class="btn btn-secondary" style="padding: 0.35rem 0.75rem;" disabled>Previous</button>
+          <span id="currentPageNum" style="font-weight: 700; color: var(--text-main); margin: 0 0.5rem;">Page 1</span>
+          <button id="nextPageBtn" class="btn btn-secondary" style="padding: 0.35rem 0.75rem;">Next</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Scraper Control Modal -->
+    <div id="scraperModal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>⚡ Cricbuzz IPL Scraper Engine</h3>
+          <button class="modal-close" id="closeScraperModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Scrape complete IPL statistics from Cricbuzz tables across all 10 franchises. Automatically combines batting &amp; bowling records and fetches portrait images.
+          </p>
+
+          <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Season Year:</label>
+            <select id="modalYearSelect" class="custom-select" style="padding: 0.4rem 1.8rem 0.4rem 0.8rem;">
+              <option value="2025">IPL 2025</option>
+              <option value="2024">IPL 2024</option>
+              <option value="2023">IPL 2023</option>
+              <option value="2022">IPL 2022</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer;">
+              <input type="checkbox" id="modalFetchImagesCheck" checked>
+              <span>Fetch and cache player profile portraits from Cricbuzz</span>
+            </label>
+          </div>
+
+          <button id="startScrapeBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            🚀 Start Full Scrape Now
+          </button>
+
+          <!-- Terminal Live Logs -->
+          <div style="margin-top: 1.25rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
+              Scraper Execution Log:
+            </div>
+            <div id="terminalLogs" class="terminal-logs">
+              [System] Scraper engine ready. Click "Start Full Scrape Now" to begin.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scheduler Modal -->
+    <div id="schedulerModal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>⏱ Scheduled Background Scraper</h3>
+          <button class="modal-close" id="closeSchedulerModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Configure an automated background job to periodically scrape fresh stats and update CSV &amp; JSON dumps without manual intervention.
+          </p>
+
+          <div style="margin-bottom: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="scheduleEnableCheck">
+              <span>Enable Scheduled Auto-Scraping</span>
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.25rem;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Interval:</label>
+            <select id="scheduleIntervalSelect" class="custom-select" style="padding: 0.4rem 1.8rem 0.4rem 0.8rem;">
+              <option value="6">Every 6 Hours</option>
+              <option value="12" selected>Every 12 Hours</option>
+              <option value="24">Every 24 Hours</option>
+            </select>
+          </div>
+
+          <div style="background: var(--bg-primary); padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); font-size: 0.8rem; margin-bottom: 1.25rem;">
+            <div>Status: <strong id="schedStatusText" style="color: var(--accent-cyan);">Disabled</strong></div>
+            <div style="margin-top: 0.3rem;">Last Run: <span id="schedLastRun" style="color: var(--text-muted);">None</span></div>
+            <div style="margin-top: 0.3rem;">Next Run: <span id="schedNextRun" style="color: var(--text-muted);">--</span></div>
+          </div>
+
+          <button id="saveScheduleBtn" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            Save Schedule Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Detail Modal -->
+    <div id="playerDetailModal" class="modal-overlay">
+      <div class="modal-box" style="max-width: 520px;">
+        <div class="modal-header">
+          <h3 id="modalPlayerName">Player Profile</h3>
+          <button class="modal-close" id="closePlayerModalBtn">&times;</button>
+        </div>
+        <div class="modal-body" id="modalPlayerContent">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      IPL Cricket Player Statistics Scraper &bull; Built with Python, FastAPI, BeautifulSoup &amp; Cricbuzz &bull; Clean CSV &amp; JSON Dumps
+    </footer>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -53,6 +53,7 @@ class BackgroundScraperScheduler:
                 players = scraper.scrape(fetch_images=True)
                 scraper.export_csv(players)
                 scraper.export_json(players)
+                scraper.export_sqlite(players)
                 self.last_run = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 self._update_next_run()
                 if self.on_scrape_complete:

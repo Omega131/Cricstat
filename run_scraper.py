@@ -29,11 +29,13 @@ def main():
 
     csv_path = scraper.export_csv(players, filename=args.csv)
     json_path = scraper.export_json(players, filename=args.json)
+    db_path = scraper.export_sqlite(players)
 
     print("\n---------------- SUMMARY ----------------")
     print(f"Total Unified Players: {len(players)}")
-    print(f"CSV Dump:  {csv_path}")
-    print(f"JSON Dump: {json_path}")
+    print(f"CSV Dump:    {csv_path}")
+    print(f"JSON Dump:   {json_path}")
+    print(f"SQLite DB:   {db_path}")
     print("-----------------------------------------")
 
 if __name__ == "__main__":

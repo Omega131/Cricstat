@@ -23,6 +23,8 @@ class PlayerStat(BaseModel):
     bowling_average: Optional[float] = None
     bowling_economy_rate: Optional[float] = None
     bowling_strike_rate: Optional[float] = None
+    boundary_percentage: Optional[float] = None
+    impact_score: Optional[float] = None
     year: int
 
 class ScrapeProgress(BaseModel):

@@ -11,6 +11,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/styles.css">
+  <!-- Chart.js local script with fallback -->
+  <script src="/static/chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"><\\/script>');
+    }
+  </script>
 </head>
 <body>
 
@@ -45,13 +52,23 @@
           <span>⚡</span> Run Scraper
         </button>
 
+        <!-- Player Comparison Button -->
+        <button id="openCompareModalBtn" class="btn btn-secondary" title="Compare two players side-by-side">
+          <span>⚖</span> Compare
+        </button>
+
         <!-- Scheduler Button -->
         <button id="openScheduleModalBtn" class="btn btn-secondary" title="Configure automated scraper">
           <span>⏱</span> Scheduler
         </button>
 
+        <!-- Dynamic Filtered View Export -->
+        <button id="downloadFilteredCsvBtn" class="btn btn-secondary" title="Export currently filtered view as CSV">
+          <span>📊</span> Export View
+        </button>
+
         <!-- CSV Download Button -->
-        <button id="downloadCsvBtn" class="btn btn-outline-gold" title="Download CSV Dump">
+        <button id="downloadCsvBtn" class="btn btn-outline-gold" title="Download Complete Raw CSV Dump">
           <span>📥</span> CSV Dump
         </button>
 
@@ -133,6 +150,64 @@
       </div>
     </section>
 
+    <!-- Visual Analytics & Telemetry Charts Section -->
+    <section class="analytics-section">
+      <div class="analytics-header">
+        <div class="analytics-title">
+          <span style="font-size: 1.3rem;">📊</span>
+          <div>
+            <h2 style="font-size: 1.1rem; font-weight: 700;">Visual Cricket Analytics &amp; Telemetry</h2>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">Real-time leaderboard charts, MVP ratings, and bowling efficiency metrics</div>
+          </div>
+        </div>
+        <button id="toggleChartsBtn" class="btn btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.8rem;">
+          <span id="chartsToggleIcon">📉</span> <span id="chartsToggleText">Hide Charts</span>
+        </button>
+      </div>
+
+      <div id="chartsContainer" class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Orange Cap Race (Top 10 Batters)</h3>
+            <span class="cap-badge cap-orange">Runs</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="orangeCapChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Purple Cap Race (Top 10 Bowlers)</h3>
+            <span class="cap-badge cap-purple">Wickets</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="purpleCapChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>IPL MVP Impact Score (Top 10)</h3>
+            <span class="cap-badge" style="background: rgba(255, 215, 0, 0.2); color: #ffd700;">MVP</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="mvpChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Bowling Efficiency (Economy vs Wickets)</h3>
+            <span class="cap-badge" style="background: rgba(0, 229, 255, 0.2); color: #00e5ff;">Efficiency</span>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="economyChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Filtering & Controls Card -->
     <section class="controls-card">
       <!-- 10 IPL Teams Filter Tabs -->
@@ -192,6 +267,7 @@
               <th data-sort="batting_strike_rate" class="th-bat">SR</th>
               <th data-sort="fours" class="th-bat">4s</th>
               <th data-sort="sixes" class="th-bat">6s</th>
+              <th data-sort="boundary_percentage" class="th-bat">Bnd %</th>
               <!-- Bowling Header Group -->
               <th data-sort="bowling_innings" class="th-bowl">Inns (Bowl)</th>
               <th data-sort="overs_bowled" class="th-bowl">Overs</th>
@@ -200,6 +276,9 @@
               <th data-sort="bowling_average" class="th-bowl">Bowl Avg</th>
               <th data-sort="bowling_economy_rate" class="th-bowl">Econ</th>
               <th data-sort="bowling_strike_rate" class="th-bowl">Bowl SR</th>
+              <!-- Advanced Metric -->
+              <th data-sort="impact_score" style="color: var(--accent-gold); font-weight: 800;">MVP Impact</th>
+              <th style="text-align: center;">Compare</th>
             </tr>
           </thead>
           <tbody id="playersTableBody">
@@ -320,6 +399,41 @@
         </div>
         <div class="modal-body" id="modalPlayerContent">
           <!-- Populated by app.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Player Comparison Modal -->
+    <div id="playerCompareModal" class="modal-overlay">
+      <div class="modal-box" style="max-width: 780px;">
+        <div class="modal-header">
+          <h3>⚖ Head-to-Head Player Comparison</h3>
+          <button class="modal-close" id="closeCompareModalBtn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+            Select any two IPL players from the current season to compare their batting, bowling, strike rates, boundary %, and MVP impact index head-to-head.
+          </p>
+
+          <div class="compare-selectors">
+            <div class="compare-select-col">
+              <label for="comparePlayer1Select">Player 1:</label>
+              <select id="comparePlayer1Select" class="custom-select" style="width: 100%;">
+                <!-- Populated via JS -->
+              </select>
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 800; color: var(--accent-gold); align-self: flex-end; padding-bottom: 0.5rem;">VS</div>
+            <div class="compare-select-col">
+              <label for="comparePlayer2Select">Player 2:</label>
+              <select id="comparePlayer2Select" class="custom-select" style="width: 100%;">
+                <!-- Populated via JS -->
+              </select>
+            </div>
+          </div>
+
+          <div id="compareResultContainer" style="margin-top: 1.5rem;">
+            <!-- Rendered by JS -->
+          </div>
         </div>
       </div>
     </div>

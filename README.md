@@ -114,7 +114,7 @@ flowchart TD
 
 ## Demo Video & Walkthrough
 
-[[Watch Video Walkthrough]](https://youtube.com) &nbsp;|&nbsp; [[Read Step-by-Step Recording Script]](WALKTHROUGH_SCRIPT.md)
+[[Watch Video Walkthrough]](https://youtube.com) &nbsp;|&nbsp; [Deployed site](https://cricstat-iu0u.onrender.com/)
 
 A complete demonstration video covering:
 1. **Architectural Deep-Dive**: How multi-table extraction and entity merging operate under the hood.
